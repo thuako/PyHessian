@@ -1,31 +1,16 @@
-#*
-# @file Different utility functions
-# Copyright (c) Zhewei Yao, Amir Gholami
-# All rights reserved.
-# This file is part of PyHessian library.
-#
-# PyHessian is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# PyHessian is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with PyHessian.  If not, see <http://www.gnu.org/licenses/>.
-#*
 
 import torch
 import math
 from torch.autograd import Variable
 import numpy as np
 
-from pyhessian.utils import group_product, group_add, normalization, get_params_grad, hessian_vector_product, orthnormal
+from pyhessian.utils import get_params_grad_with_print, group_product, group_add, normalization, get_params_grad, hessian_vector_product, orthnormal
+import collections 
+from functools import partial
 
-class hessian():
+
+
+class hessian_with_activation():
     """
     The class used to compute :
         i) the top 1 (n) eigenvalue(s) of the neural network
@@ -47,6 +32,8 @@ class hessian():
 
         self.model = model.eval()  # make model is in evaluation model
         self.criterion = criterion
+        self.activations = collections.defaultdict(list)
+        self.activation_grads = collections.defaultdict(list)
 
         if data != None:
             self.data = data
@@ -64,8 +51,7 @@ class hessian():
         if not self.full_dataset:
             self.inputs, self.targets = self.data
             if self.device == 'cuda':
-                self.inputs, self.targets = self.inputs.cuda(
-                ), self.targets.cuda()
+                self.inputs, self.targets = self.inputs.cuda(), self.targets.cuda()
 
             # if we only compute the Hessian information for a single batch data, we can re-use the gradients.
             outputs = self.model(self.inputs)
@@ -77,13 +63,167 @@ class hessian():
         self.params = params
         self.gradsH = gradsH  # gradient used for Hessian computation
 
-    def dataloader_hv_product(self, v):
+    def insert_hook(self, module_name):
+        def save_input(name, module, input, output):
+            self.activations[name].append(input[0])
+        
+        def save_input_grad(name, module, in_grad, out_grad):
+            self.activation_grads[name].append(in_grad[0])
 
+        for name, m in self.model.named_modules():
+            if not name.endswith(module_name):
+                continue
+            m.register_forward_hook(partial(save_input, name))
+            m.register_backward_hook(partial(save_input_grad, name))
+            # print(f"{name} module hooked")
+
+    def check_reg_hook_size(self):
+        for layer in self.activations.keys():
+            input_size = torch.randint_like(self.activations[layer], high=2, device="cuda").size()
+            if self.activation_grads[layer] is not None:
+                grad_size = self.activation_grads[layer].size()
+            else:
+                grad_size = 1
+            # print(type(self.activation_grads[layer][i][0]))
+            if(input_size != grad_size):
+                print(f"########## {layer} not equal !! #######")
+                print( input_size, grad_size, "\n\n")
+            else:
+                print(f"************* {layer} ************")
+                print( input_size, "\n\n")
+
+    def get_activ_rand_v(self, show_layer=False, dont_reset=False):
+        self.reset_reg_active()
+
+        device = self.device
+        for inputs, targets in self.data:
+            break
+        self.model.zero_grad()
+        # print(f"********* 1 iteration input size : {len(inputs)}")
+        outputs = self.model(inputs.to(device))
+        loss = self.criterion(outputs, targets.to(device))
+        loss.backward(create_graph=True)
+
+        activs, _ = self.get_same_size_activ_grad(show_layer=show_layer, dont_reset=dont_reset)
+
+        v = [
+            torch.randint_like(p, high=2, device=device)
+            for p in activs
+        ]
+        self.model.zero_grad()
+        if dont_reset is not True:
+            self.reset_reg_active()
+        return v
+
+    def get_same_size_activ_grad(self, show_layer=False, dont_reset=False):
+        # rand_vs = []
+        activ_grads = []
+        activs = []
+        for layer in self.activations.keys():
+            activ_element = self.activations[layer][0]
+            grad_element = self.activation_grads[layer][0]
+
+            if len(self.activations[layer]) != 1:
+                print(len(self.activations[layer]), self.activations[layer][0].size())
+                raise Exception("register hook have several batchs.\
+                     In processing hessian activation, register hook must have only one batch")
+
+            if (grad_element is None):
+                continue
+            elif grad_element.size() != activ_element.size() :
+                continue
+            else:    
+                # rand_vs.append(torch.randint_like(self.activations[layer], high=2, device="cuda"))
+                if show_layer:
+                    print(f"append {layer}, active size : {activ_element.size()}, active grad size : {grad_element.size()}")
+                activ_grads.append(grad_element)
+                activs.append(activ_element)
+        if dont_reset is not True:
+            self.reset_reg_active()
+        return activs, activ_grads
+
+    def reset_reg_active(self):
+        for layer in self.activations.keys():
+            self.activations[layer] = []
+            self.activation_grads[layer] = []
+
+    def dataloader_activation_hv_product(self, active_v):
         device = self.device
         num_data = 0  # count the number of datum points in the dataloader
 
-        THv = [torch.zeros(p.size()).to(device) for p in self.params
-              ]  # accumulate result
+        Active_THv = [torch.zeros(p.size()).to(device) for p in active_v]  # accumulate result
+        for inputs, targets in self.data:
+            self.model.zero_grad()
+
+            self.reset_reg_active()
+
+            outputs = self.model(inputs.to(device))
+            loss = self.criterion(outputs, targets.to(device))
+            loss.backward(create_graph=True)
+
+            activations, activation_grads = self.get_same_size_activ_grad()
+
+            self.model.zero_grad()
+            
+            if active_v[0].size(0) == inputs.size(0) :
+                Active_Hv = []
+                for (i, (grad, act, v)) in enumerate(zip(activation_grads, activations, active_v)):
+
+                    Active_Hv_element = torch.autograd.grad(grad,
+                                        act,
+                                        grad_outputs=v,
+                                        only_inputs=True,
+                                        retain_graph=True)
+                    Active_Hv.append(Active_Hv_element[0])
+                tmp_num_data = inputs.size(0)
+                Active_THv = [
+                    THv1 + Hv1 * float(tmp_num_data) + 0.
+                    for THv1, Hv1 in zip(Active_THv, Active_Hv)
+                ]
+                num_data += float(tmp_num_data)
+            else:
+                print("input and rand v has different batch size")
+
+        Active_THv = [THv1 / float(num_data) for THv1 in Active_THv]
+        eigenvalue = group_product(Active_THv, active_v).cpu().item()
+        return eigenvalue, Active_THv
+
+    def trace_activ(self, maxIter=100, tol=1e-3):
+        """
+        compute the trace of hessian using Hutchinson's method
+        maxIter: maximum iterations used to compute trace
+        tol: the relative tolerance
+        """
+        device = self.device
+        Active_trace_vhv = []
+        Active_trace = 0.
+
+        for i in range(maxIter):
+            self.model.zero_grad()
+            active_v = self.get_activ_rand_v()
+            # generate Rademacher random variables
+            for v_i in active_v:
+                v_i[v_i == 0] = -1
+
+            if self.full_dataset:
+                _, Active_Hv = self.dataloader_activation_hv_product(active_v)
+
+            Active_trace_vhv.append([group_product(Hv, v).cpu().item() for Hv, v in zip(Active_Hv, active_v)])
+            if abs(np.mean(Active_trace_vhv) - Active_trace) / (abs(Active_trace) + 1e-6) < tol:
+                print(f"In {i}th iteration, trace had been converge")
+                return Active_trace_vhv
+            else:
+                Active_trace = np.mean(Active_trace_vhv)
+        
+        print(f"trace had not been converge")
+        return Active_trace_vhv
+
+
+    def dataloader_hv_product(self, v):
+        device = self.device
+        num_data = 0  # count the number of datum points in the dataloader
+
+        THv = [torch.zeros(p.size()).to(device) for p in self.params]  # accumulate result
         for inputs, targets in self.data:
             self.model.zero_grad()
             tmp_num_data = inputs.size(0)
@@ -106,6 +246,7 @@ class hessian():
         THv = [THv1 / float(num_data) for THv1 in THv]
         eigenvalue = group_product(THv, v).cpu().item()
         return eigenvalue, THv
+
 
     def eigenvalues(self, maxIter=100, tol=1e-3, top_n=1):
         """
@@ -189,6 +330,7 @@ class hessian():
 
         return trace_vhv
 
+    
     def density(self, iter=100, n_v=1):
         """
         compute estimated eigenvalue density using stochastic lanczos algorithm (SLQ)

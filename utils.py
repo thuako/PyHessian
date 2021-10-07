@@ -27,7 +27,7 @@ from torchvision import datasets, transforms
 from torch.autograd import Variable
 
 
-def getData(name='cifar10', train_bs=128, test_bs=1000):
+def getData(name='cifar10', train_bs=128, test_bs=1000, train_length=1):
     """
     Get the dataloader
     """
@@ -50,6 +50,10 @@ def getData(name='cifar10', train_bs=128, test_bs=1000):
                                     train=True,
                                     download=True,
                                     transform=transform_train)
+
+        train_length = int(len(trainset) * train_length)
+        trainset, _ = torch.utils.data.random_split(trainset, [train_length, len(trainset) - train_length]) 
+
         train_loader = torch.utils.data.DataLoader(trainset,
                                                    batch_size=train_bs,
                                                    shuffle=True)

@@ -22,6 +22,5 @@ import argparse
 import importlib
 import os
 
-from .utils import group_product, group_add, normalization, get_params_grad, hessian_vector_product, orthnormal, get_params_grad_with_print
+from .utils import group_product, group_add, normalization, get_params_grad, hessian_vector_product, orthnormal
 from .hessian import hessian
-from .hessian_with_activation import hessian_with_activation 
