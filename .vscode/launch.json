@@ -1,0 +1,38 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "HAWQ/quant_train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-a", "resnet18", 
+                "--epochs", "1", "--lr",
+                "0.0001",
+                "--batch-size",
+                "128",
+                "--data",
+                "/ImageNet/dataset/imagenet/",
+                "--pretrained",
+                "--save-path",
+                "./debug/",
+                "--act-range-momentum=1",
+                "--wd",
+                "1e-4",
+                "--data-percentage",
+                "0.1",
+                "--fix-BN",
+                "--checkpoint-iter",
+                "-1",
+                "--quant-scheme",
+                "uniform8",
+            ],
+            // "justMyCode": false,
+        }
+    ]
+}

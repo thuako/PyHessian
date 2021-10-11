@@ -1,0 +1,135 @@
+08-Oct-21 21:36:26 - Namespace(act_percentile=0, act_range_momentum=-1, arch='resnet18', batch_size=1, bias_bit=32, channel_wise=True, checkpoint_iter=-1, data=None, data_percentage=1, dist_backend='nccl', dist_url='tcp://224.66.41.62:23456', distill_alpha=0.95, distill_method='None', epochs=90, evaluate=False, evaluate_times=-1, fix_BN=False, fix_BN_threshold=None, fixed_point_quantization=False, gpu=None, lr=0.1, momentum=0.9, multiprocessing_distributed=False, pretrained=False, print_freq=10, quant_mode='symmetric', quant_scheme='uniform4', rank=-1, resume='', resume_quantize=False, save_path='checkpoints/imagenet/test/', seed=None, start_epoch=0, teacher_arch='resnet101', temperature=6, weight_decay=0.0001, weight_percentile=0, workers=4, world_size=-1)
+08-Oct-21 21:36:38 - Namespace(act_percentile=0, act_range_momentum=-1, arch='resnet18', batch_size=1, bias_bit=32, channel_wise=True, checkpoint_iter=-1, data=None, data_percentage=1, dist_backend='nccl', dist_url='tcp://224.66.41.62:23456', distill_alpha=0.95, distill_method='None', epochs=90, evaluate=False, evaluate_times=-1, fix_BN=False, fix_BN_threshold=None, fixed_point_quantization=False, gpu=None, lr=0.1, momentum=0.9, multiprocessing_distributed=False, pretrained=False, print_freq=10, quant_mode='symmetric', quant_scheme='uniform4', rank=-1, resume='', resume_quantize=False, save_path='checkpoints/imagenet/test/', seed=None, start_epoch=0, teacher_arch='resnet101', temperature=6, weight_decay=0.0001, weight_percentile=0, workers=4, world_size=-1)
+08-Oct-21 21:36:40 - => creating PyTorchCV model 'resnet18'
+08-Oct-21 21:36:40 - match all modules defined in bit_config: True
+08-Oct-21 21:36:40 - Q_ResNet18(
+  (quant_input): QuantAct(activation_bit=8, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  (quant_init_block_convbn): (QuantBnConv2d(
+    (conv): Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+  ), weight_bit=8, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+  (quant_act_int32): QuantAct(activation_bit=16, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+  (act): ReLU()
+  (stage1.unit1): Q_ResBlockBn(
+    (quant_act): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn1): (QuantBnConv2d(
+      (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(64, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act1): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn2): (QuantBnConv2d(
+      (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(64, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act_int32): QuantAct(activation_bit=16, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  )
+  (stage1.unit2): Q_ResBlockBn(
+    (quant_act): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn1): (QuantBnConv2d(
+      (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(64, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act1): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn2): (QuantBnConv2d(
+      (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(64, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act_int32): QuantAct(activation_bit=16, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  )
+  (stage2.unit1): Q_ResBlockBn(
+    (quant_act): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn1): (QuantBnConv2d(
+      (conv): Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(128, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act1): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn2): (QuantBnConv2d(
+      (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(128, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_identity_convbn): (QuantBnConv2d(
+      (conv): Conv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+      (bn): BatchNorm2d(128, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act_int32): QuantAct(activation_bit=16, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  )
+  (stage2.unit2): Q_ResBlockBn(
+    (quant_act): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn1): (QuantBnConv2d(
+      (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(128, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act1): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn2): (QuantBnConv2d(
+      (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(128, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act_int32): QuantAct(activation_bit=16, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  )
+  (stage3.unit1): Q_ResBlockBn(
+    (quant_act): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn1): (QuantBnConv2d(
+      (conv): Conv2d(128, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(256, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act1): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn2): (QuantBnConv2d(
+      (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(256, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_identity_convbn): (QuantBnConv2d(
+      (conv): Conv2d(128, 256, kernel_size=(1, 1), stride=(2, 2), bias=False)
+      (bn): BatchNorm2d(256, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act_int32): QuantAct(activation_bit=16, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  )
+  (stage3.unit2): Q_ResBlockBn(
+    (quant_act): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn1): (QuantBnConv2d(
+      (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(256, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act1): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn2): (QuantBnConv2d(
+      (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(256, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act_int32): QuantAct(activation_bit=16, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  )
+  (stage4.unit1): Q_ResBlockBn(
+    (quant_act): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn1): (QuantBnConv2d(
+      (conv): Conv2d(256, 512, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(512, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act1): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn2): (QuantBnConv2d(
+      (conv): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(512, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_identity_convbn): (QuantBnConv2d(
+      (conv): Conv2d(256, 512, kernel_size=(1, 1), stride=(2, 2), bias=False)
+      (bn): BatchNorm2d(512, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act_int32): QuantAct(activation_bit=16, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  )
+  (stage4.unit2): Q_ResBlockBn(
+    (quant_act): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn1): (QuantBnConv2d(
+      (conv): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(512, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act1): QuantAct(activation_bit=4, full_precision_flag=False, quant_mode=asymmetric, Act_min: 0.00, Act_max: 0.00)
+    (quant_convbn2): (QuantBnConv2d(
+      (conv): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(512, eps=1e-05, momentum=0.99, affine=True, track_running_stats=True)
+    ), weight_bit=4, bias_bit=32, groups=1, wt-channel-wise=True, wt-percentile=0, quant_mode=symmetric)
+    (quant_act_int32): QuantAct(activation_bit=16, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  )
+  (final_pool): QuantAveragePool2d(
+    (final_pool): AvgPool2d(kernel_size=7, stride=1, padding=0)
+  )
+  (quant_act_output): QuantAct(activation_bit=8, full_precision_flag=False, quant_mode=symmetric, Act_min: 0.00, Act_max: 0.00)
+  (quant_output): (QuantLinear() weight_bit=8, full_precision_flag=False, quantize_fn=symmetric)
+)

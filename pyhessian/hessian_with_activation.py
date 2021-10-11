@@ -35,6 +35,9 @@ class hessian_with_activation():
         self.activations = collections.defaultdict(list)
         self.activation_grads = collections.defaultdict(list)
 
+        self.weights = collections.defaultdict(list)
+        self.weight_grads = collections.defaultdict(list)
+
         if data != None:
             self.data = data
             self.full_dataset = False
@@ -75,22 +78,52 @@ class hessian_with_activation():
                 continue
             m.register_forward_hook(partial(save_input, name))
             m.register_backward_hook(partial(save_input_grad, name))
-            # print(f"{name} module hooked")
+            print(f"{name} module hooked")
+    
+    def insert_hook_quant_module(self, module_name):
+        def save_input(name, module, input, output):
+            self.activations[name].append(output)
+        
+        def save_input_grad(name, module, in_grad, out_grad):
+            self.activation_grads[name].append(out_grad)
+
+        for name, m in self.model.named_modules():
+            if not name[:-1].endswith(module_name):
+                continue
+            m.register_forward_hook(partial(save_input, name))
+            m.register_backward_hook(partial(save_input_grad, name))
+            print(f"{name} module hooked")
 
     def check_reg_hook_size(self):
+        device = self.device
+        for inputs, targets in self.data:
+            break
+        self.model.zero_grad()
+        # print(f"********* 1 iteration input size : {len(inputs)}")
+        outputs = self.model(inputs.to(device))
+
+        loss = self.criterion(outputs, targets.to(device))
+        loss.backward(create_graph=True)
+
         for layer in self.activations.keys():
-            input_size = torch.randint_like(self.activations[layer], high=2, device="cuda").size()
-            if self.activation_grads[layer] is not None:
-                grad_size = self.activation_grads[layer].size()
-            else:
-                grad_size = 1
-            # print(type(self.activation_grads[layer][i][0]))
-            if(input_size != grad_size):
-                print(f"########## {layer} not equal !! #######")
-                print( input_size, grad_size, "\n\n")
-            else:
-                print(f"************* {layer} ************")
-                print( input_size, "\n\n")
+            activ_element = self.activations[layer][0]
+            grad_element = self.activation_grads[layer][0]
+            print(self.activations[layer])
+
+            if len(self.activations[layer]) != 1:
+                print(len(self.activations[layer]), self.activations[layer][0].size())
+                raise Exception("register hook have several batchs.\
+                     In processing hessian activation, register hook must have only one batch")
+
+            if (grad_element is None):
+                continue
+            elif grad_element.size() != activ_element.size() :
+                print(f"********{layer} input and grad are not equal {activ_element.size()}")
+                continue
+            else:    
+                print(f"{layer} input and grad are eqaul {activ_element.size()}")
+        self.model.zero_grad()
+        self.reset_reg_active()
 
     def get_activ_rand_v(self, show_layer=False, dont_reset=False):
         self.reset_reg_active()
@@ -111,8 +144,9 @@ class hessian_with_activation():
             for p in activs
         ]
         self.model.zero_grad()
-        if dont_reset is not True:
-            self.reset_reg_active()
+        # if dont_reset is not True:
+        #     self.reset_reg_active()
+        self.reset_reg_active()
         return v
 
     def get_same_size_activ_grad(self, show_layer=False, dont_reset=False):
@@ -134,8 +168,8 @@ class hessian_with_activation():
                 continue
             else:    
                 # rand_vs.append(torch.randint_like(self.activations[layer], high=2, device="cuda"))
-                if show_layer:
-                    print(f"append {layer}, active size : {activ_element.size()}, active grad size : {grad_element.size()}")
+                # if show_layer:
+                    # print(f"append {layer}, active size : {activ_element.size()}, active grad size : {grad_element.size()}")
                 activ_grads.append(grad_element)
                 activs.append(activ_element)
         if dont_reset is not True:
@@ -209,17 +243,17 @@ class hessian_with_activation():
                 _, Active_Hv = self.dataloader_activation_hv_product(active_v)
 
             Active_trace_vhv.append([group_product(Hv, v).cpu().item() for Hv, v in zip(Active_Hv, active_v)])
-            if abs(np.mean(Active_trace_vhv) - Active_trace) / (abs(Active_trace) + 1e-6) < tol:
+            if np.mean(np.abs(np.mean(Active_trace_vhv, axis=0) - Active_trace) / (np.abs(Active_trace) + 1e-6)) < tol:
                 print(f"In {i}th iteration, trace had been converge")
                 return Active_trace_vhv
             else:
-                Active_trace = np.mean(Active_trace_vhv)
+                Active_trace = np.mean(Active_trace_vhv, axis=0)
         
         print(f"trace had not been converge")
         return Active_trace_vhv
 
 
-    def dataloader_hv_product(self, v):
+    def dataloader_hv_product(self, v, param_name='conv.weight'):
         device = self.device
         num_data = 0  # count the number of datum points in the dataloader
 
@@ -230,7 +264,7 @@ class hessian_with_activation():
             outputs = self.model(inputs.to(device))
             loss = self.criterion(outputs, targets.to(device))
             loss.backward(create_graph=True)
-            params, gradsH = get_params_grad(self.model)
+            params, gradsH = get_params_grad(self.model, param_name='conv.weight')
             self.model.zero_grad()
             Hv = torch.autograd.grad(gradsH,
                                      params,
@@ -246,6 +280,23 @@ class hessian_with_activation():
         THv = [THv1 / float(num_data) for THv1 in THv]
         eigenvalue = group_product(THv, v).cpu().item()
         return eigenvalue, THv
+
+    def show_hessian_layer(self, param_name="conv.weight"):
+        device = self.device
+        for inputs, targets in self.data:
+            break
+        self.model.zero_grad()
+        outputs = self.model(inputs.to(device))
+        loss = self.criterion(outputs, targets.to(device))
+        loss.backward(create_graph=True)
+
+        for name, param in self.model.named_parameters():
+            # if (not param.requires_grad):
+            #     continue
+            if not param_name in name or not param.requires_grad:
+                continue
+            print(name)
+        self.model.zero_grad()        
 
 
     def eigenvalues(self, maxIter=100, tol=1e-3, top_n=1):
@@ -297,7 +348,7 @@ class hessian_with_activation():
 
         return eigenvalues, eigenvectors
 
-    def trace(self, maxIter=100, tol=1e-3):
+    def trace(self, maxIter=100, tol=1e-3, param_name='conv.weight'):
         """
         compute the trace of hessian using Hutchinson's method
         maxIter: maximum iterations used to compute trace
@@ -319,15 +370,17 @@ class hessian_with_activation():
                 v_i[v_i == 0] = -1
 
             if self.full_dataset:
-                _, Hv = self.dataloader_hv_product(v)
+                _, Hv = self.dataloader_hv_product(v, param_name=param_name)
+                # print(f"THv length : {len(Hv)}, THv element shape : {Hv[0].size()}")
             else:
                 Hv = hessian_vector_product(self.gradsH, self.params, v)
-            trace_vhv.append(group_product(Hv, v).cpu().item())
-            if abs(np.mean(trace_vhv) - trace) / (abs(trace) + 1e-6) < tol:
+            trace_vhv.append([group_product(Hv_element, v_element).cpu().item() for Hv_element, v_element in zip(Hv, v)])
+            if np.mean(np.abs(np.mean(trace_vhv, axis=0) - trace) / (np.abs(trace) + 1e-6)) < tol:
+                print(f"In {i}th iteration, trace had been converge")
                 return trace_vhv
             else:
-                trace = np.mean(trace_vhv)
-
+                trace = np.mean(trace_vhv, axis=0)
+        print(f"trace had not been converge")
         return trace_vhv
 
     

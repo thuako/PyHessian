@@ -23,11 +23,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import os
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 
-
-def getData(name='cifar10', train_bs=128, test_bs=1000, train_length=1):
+def getData(name='cifar10', train_bs=128, test_bs=1000, data_dir='', arch='resnet', train_length=1):
     """
     Get the dataloader
     """
@@ -93,6 +93,46 @@ def getData(name='cifar10', train_bs=128, test_bs=1000, train_length=1):
         test_loader = torch.utils.data.DataLoader(testset,
                                                   batch_size=test_bs,
                                                   shuffle=False)
+
+    if name == 'imagenet':
+
+        train_resolution = 224
+        if arch == "inceptionv3":
+            train_resolution = 299
+
+        test_resolution = (256, 224)
+        if arch == 'inceptionv3':
+            test_resolution = (342, 299)
+
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                    std=[0.229, 0.224, 0.225])
+
+        train_dataset = datasets.ImageFolder(
+            os.path.join(data_dir, 'train'),
+            transforms.Compose([
+                transforms.RandomResizedCrop(train_resolution),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+            ]))
+        
+        train_length = int(len(train_dataset) * train_length)
+        train_dataset, _ = torch.utils.data.random_split(train_dataset, [train_length, len(train_dataset) - train_length])             
+
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset, batch_size=train_bs, shuffle=True,
+            num_workers=8, pin_memory=True)
+
+        test_loader = torch.utils.data.DataLoader(
+            datasets.ImageFolder(os.path.join(data_dir, 'val'), transforms.Compose([
+                transforms.Resize(test_resolution[0]),
+                transforms.CenterCrop(test_resolution[1]),
+                transforms.ToTensor(),
+                normalize,
+            ])),
+            batch_size=test_bs, shuffle=False,
+            num_workers=8, pin_memory=True)
+
 
     return train_loader, test_loader
 
