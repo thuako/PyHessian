@@ -1,3 +1,3 @@
 [submodule "HAWQ"]
-        path = HAWQ/
-        url = https://github.com/thuako/HAWQ.git 
+	path = HAWQ
+	url = https://github.com/thuako/HAWQ
