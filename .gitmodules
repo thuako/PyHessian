@@ -1,0 +1,3 @@
+[submodule "src/static_management"]
+        path = HAWQ/
+        url = https://github.com/thuako/HAWQ.git 
